@@ -53,7 +53,7 @@ public class CouchApp extends HttpServlet{
       System.exit(0);
     }
     PrintWriter pw = response.getWriter();
-    if(request.getParameter("sk") == "Select") {
+    if(request.getParameter("sk").equals("Select")) {
     try {
         OperationFuture<Boolean> setOp = client.set(request.getParameter("email").toString(), ttl, obj.toString());
         if(setOp.get().booleanValue()) {
@@ -77,7 +77,7 @@ public class CouchApp extends HttpServlet{
             ex.printStackTrace();
         }
      }
-     else if(request.getParameter("sk") != "Select") {
+     else if(!request.getParameter("sk").equals("Select")) {
         System.setProperty("viewmode", "development"); // before the connection to Couchbase
 
   View view = client.getView("dev_queryprofiles", "skill_set");
