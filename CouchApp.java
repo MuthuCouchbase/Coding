@@ -14,9 +14,12 @@ import com.couchbase.client.CouchbaseClient;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.internal.GetFuture;
 import net.spy.memcached.internal.OperationFuture;
+import com.couchbase.client.protocol.views.*;
+import com.couchbase.client.protocol.views.DesignDocument;
+import com.couchbase.client.protocol.views.ViewDesign;
 
-public class CouchApp extends HttpServlet{ 
-  public void doPost(HttpServletRequest request, 
+public class CouchApp extends HttpServlet{
+  public void doPost(HttpServletRequest request,
   HttpServletResponse response)
   throws ServletException,IOException{
   
@@ -39,7 +42,7 @@ public class CouchApp extends HttpServlet{
     List<URI> uris = new LinkedList<URI>();
          
     // Connect to localhost or to the appropriate URI
-    uris.add(URI.create("http://ec2-54-215-70-175.us-west-1.compute.amazonaws.com:8091/pools"));
+    uris.add(URI.create("http://ec2-54-215-61-182.us-west-1.compute.amazonaws.com:8091/pools"));
 
     CouchbaseClient client = null;
     try {
@@ -49,11 +52,12 @@ public class CouchApp extends HttpServlet{
         + e.getMessage());
       System.exit(0);
     }
+    PrintWriter pw = response.getWriter();
+    if(request.getParameter("sk") == "Select") {
     try {
         OperationFuture<Boolean> setOp = client.set(request.getParameter("email").toString(), ttl, obj.toString());
         if(setOp.get().booleanValue()) {
             response.setContentType("text/html");
-            PrintWriter pw = response.getWriter();
             pw.println("<html>");
             pw.println("<head><title>Updated Data Successfully</title></title>");
             pw.println("<body>");
@@ -62,17 +66,35 @@ public class CouchApp extends HttpServlet{
         }
         else {
             response.setContentType("text/html");
-            PrintWriter pw = response.getWriter();
             pw.println("<html>");
             pw.println("<head><title>Unable to Update the Database</title></title>");
             pw.println("<body>");
-            pw.println("<h1>Thank you for using Couchbase</h1>");
+            pw.println("<h1>Unable to update the Database</h1>");
             pw.println("</body></html>");
         }
      }
         catch(Exception ex) {
             ex.printStackTrace();
         }
+     }
+     else if(request.getParameter("sk") != "Select") {
+        System.setProperty("viewmode", "development"); // before the connection to Couchbase
+
+  View view = client.getView("dev_queryprofiles", "skill_set");
+	Query query = new Query();
+	query.setIncludeDocs(true).setLimit(20);
+	query.setStale( Stale.FALSE );
+        //query.setStartKey("NoSQL");
+	ViewResponse result = client.query(view, query);
+	for(ViewRow row : result) {
+           response.setContentType("text/html");
+            pw.println("<html>");
+            pw.println("<head><title>View Results</title></title>");
+            pw.println("<body>");
+            pw.println("<h1>"+row.getDocument()+"</h1>");
+            pw.println("</body></html>");
+	}
+     }
         
    }
 }
